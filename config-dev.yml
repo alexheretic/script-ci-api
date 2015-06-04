@@ -1,0 +1,14 @@
+logging:
+  appenders:
+  - type: console
+  level: debug
+  loggers:
+    org.eclipse.jetty: info
+
+server:
+  adminContextPath: /admin
+  applicationContextPath: /api
+  connector:
+    port: 8080
+    type: http
+  type: simple
