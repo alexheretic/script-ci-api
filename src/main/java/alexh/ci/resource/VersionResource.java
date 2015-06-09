@@ -1,20 +1,20 @@
 package alexh.ci.resource;
 
 import static java.util.Collections.unmodifiableMap;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import alexh.Fluent;
 import com.google.common.base.Throwables;
 import com.google.common.io.Resources;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Properties;
 
 @Path("version")
-@Produces(MediaType.APPLICATION_JSON)
+@Produces(APPLICATION_JSON)
 public class VersionResource {
 
     private static final Map versionMap;

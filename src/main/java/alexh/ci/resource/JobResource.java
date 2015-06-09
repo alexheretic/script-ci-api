@@ -3,6 +3,7 @@ package alexh.ci.resource;
 import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Collections.emptyList;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import alexh.Fluent;
 import alexh.ci.ScriptRunner;
 import com.google.common.io.Files;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -20,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 
 @Path("jobs")
+@Produces(APPLICATION_JSON)
 public class JobResource {
 
     private static final Logger log = LoggerFactory.getLogger(JobResource.class);
