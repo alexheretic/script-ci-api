@@ -23,7 +23,6 @@ public class JobResource {
         return emptyList();
     }
 
-
     @POST
     @Path("single")
     public synchronized void postScript(String script) throws Exception {
@@ -44,6 +43,5 @@ public class JobResource {
 //            .outputTo("")
             .run()
             .thenAccept(exit -> log.info("Ran single-job with exit code: "+ exit));
-
     }
 }
