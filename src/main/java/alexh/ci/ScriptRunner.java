@@ -58,10 +58,8 @@ public class ScriptRunner {
                      PrintWriter writer = output.isPresent() ? new PrintWriter(output.get()) : null) {
 
                     while (process.isAlive()) {
-                        String outLine, errLine = null;
-
-                        // don't want to short-circuit here
-                        while ((outLine = reader.readLine()) != null | (errLine = errReader.readLine()) != null) {
+                        String outLine = null, errLine = null;
+                        while ((errLine = errReader.readLine()) != null || (outLine = reader.readLine()) != null) {
                             print(writer, outLine, errLine);
                         }
                     }
