@@ -1,5 +1,6 @@
 package alexh.ci;
 
+import alexh.ci.resource.JobResource;
 import alexh.ci.resource.VersionResource;
 import io.dropwizard.Application;
 import io.dropwizard.Configuration;
@@ -22,5 +23,6 @@ public class ScriptCiApplication extends Application<Configuration> {
     @Override
     public void run(Configuration configuration, Environment environment) throws Exception {
         environment.jersey().register(new VersionResource());
+        environment.jersey().register(new JobResource());
     }
 }
