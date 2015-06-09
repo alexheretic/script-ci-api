@@ -7,6 +7,7 @@ import io.dropwizard.Configuration;
 import io.dropwizard.java8.Java8Bundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import io.dropwizard.util.Duration;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import javax.servlet.DispatcherType;
 import javax.servlet.FilterRegistration;
@@ -26,7 +27,10 @@ public class ScriptCiApplication extends Application<Configuration> {
     @Override
     public void run(Configuration configuration, Environment environment) throws Exception {
         environment.jersey().register(new VersionResource());
-        environment.jersey().register(new JobResource());
+        environment.jersey().register(new JobResource(environment.lifecycle().executorService("single-exe")
+            .maxThreads(1)
+            .shutdownTime(Duration.seconds(30l))
+            .build()));
 
         configureCors(environment);
     }

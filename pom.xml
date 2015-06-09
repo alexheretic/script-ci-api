@@ -40,6 +40,13 @@
       <artifactId>dropwizard-java8</artifactId>
       <version>0.8.0-1</version>
     </dependency>
+
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.4</version>
+    </dependency>
+
   </dependencies>
 
   <build>
