@@ -30,7 +30,7 @@ public class ScriptCiApplication extends Application<Configuration> {
         environment.jersey().register(new JobResource(environment.lifecycle().executorService("single-exe")
             .maxThreads(1)
             .shutdownTime(Duration.seconds(30l))
-            .build()));
+            .build(), environment.getObjectMapper()));
 
         configureCors(environment);
     }
