@@ -2,7 +2,6 @@ package alexh.ci;
 
 import static alexh.Unchecker.uncheck;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
@@ -65,20 +64,20 @@ public class ScriptRunner {
     /** @return future with the script exit code as result */
     public CompletableFuture<Integer> run() {
         return CompletableFuture.supplyAsync(() -> {
-            ExecutorService errorStreamExe = null;
+            ExecutorService writerExecutor = null;
             try (@Nullable PrintWriter writer = output.isPresent() ? new PrintWriter(output.get()) : null) {
                 output.filter(File::exists).ifPresent(File::delete);
 
                 Process process = builder.start();
-                errorStreamExe = Executors.newSingleThreadExecutor();
+                writerExecutor = Executors.newWorkStealingPool(2);
 
                 try (InputStream in = process.getInputStream();
                      BufferedReader reader = new BufferedReader(new InputStreamReader(in));
                      InputStream errorStream = process.getErrorStream();
                      BufferedReader errReader = new BufferedReader(new InputStreamReader(errorStream))) {
 
-                    CompletableFuture<?> errWrite = writeAsync(writer, errReader, errorStreamExe);
-                    CompletableFuture<?> stdWrite = writeAsync(writer, reader, MoreExecutors.directExecutor());
+                    CompletableFuture<?> errWrite = writeAsync(writer, errReader, writerExecutor);
+                    CompletableFuture<?> stdWrite = writeAsync(writer, reader, writerExecutor);
 
                     process.waitFor();
                     try {
@@ -90,7 +89,7 @@ public class ScriptRunner {
                 return process.exitValue();
             }
             catch (Exception ex) { ex.printStackTrace(); return 1; }
-            finally { if (errorStreamExe != null) errorStreamExe.shutdownNow(); }
+            finally { if (writerExecutor != null) writerExecutor.shutdownNow(); }
         }, exe);
     }
 }

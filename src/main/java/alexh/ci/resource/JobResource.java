@@ -91,4 +91,11 @@ public class JobResource {
             .appendAll(objectMapper.readValue(status, Map.class))
             .append("log", Files.toString(new File("jobs/single-job/out.log"), UTF_8));
     }
+
+    @GET
+    @Path("single")
+    public Map singleScript() throws IOException {
+        return new Fluent.HashMap<>()
+            .append("script", Files.toString(new File("jobs/single-job/scripts/script.sh"), UTF_8));
+    }
 }
