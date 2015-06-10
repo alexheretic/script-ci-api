@@ -69,7 +69,9 @@ public class JobResource {
             .outputTo(new File("jobs/single-job/out.log"))
             .run()
             .thenAccept(exit -> {
-                writeSingleJobStatus(status.append("ended", Instant.now().toString()));
+                writeSingleJobStatus(status
+                    .append("ended", Instant.now().toString())
+                    .append("exitCode", exit));
                 log.info("Ran single-job with exit code: " + exit);
             });
     }

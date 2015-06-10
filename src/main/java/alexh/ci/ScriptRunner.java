@@ -64,20 +64,20 @@ public class ScriptRunner {
     /** @return future with the script exit code as result */
     public CompletableFuture<Integer> run() {
         return CompletableFuture.supplyAsync(() -> {
-            ExecutorService writerExecutor = null;
+            ExecutorService writerPool = null;
             try (@Nullable PrintWriter writer = output.isPresent() ? new PrintWriter(output.get()) : null) {
                 output.filter(File::exists).ifPresent(File::delete);
 
                 Process process = builder.start();
-                writerExecutor = Executors.newWorkStealingPool(2);
+                writerPool = Executors.newWorkStealingPool(2);
 
                 try (InputStream in = process.getInputStream();
                      BufferedReader reader = new BufferedReader(new InputStreamReader(in));
                      InputStream errorStream = process.getErrorStream();
                      BufferedReader errReader = new BufferedReader(new InputStreamReader(errorStream))) {
 
-                    CompletableFuture<?> errWrite = writeAsync(writer, errReader, writerExecutor);
-                    CompletableFuture<?> stdWrite = writeAsync(writer, reader, writerExecutor);
+                    CompletableFuture<?> errWrite = writeAsync(writer, errReader, writerPool);
+                    CompletableFuture<?> stdWrite = writeAsync(writer, reader, writerPool);
 
                     process.waitFor();
                     try {
@@ -89,7 +89,7 @@ public class ScriptRunner {
                 return process.exitValue();
             }
             catch (Exception ex) { ex.printStackTrace(); return 1; }
-            finally { if (writerExecutor != null) writerExecutor.shutdownNow(); }
+            finally { if (writerPool != null) writerPool.shutdownNow(); }
         }, exe);
     }
 }
