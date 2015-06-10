@@ -51,7 +51,7 @@ public class ScriptRunner {
     }
 
     private static CompletableFuture<?> writeAsync(PrintWriter writer, BufferedReader reader, Executor exe) {
-        return CompletableFuture.supplyAsync(uncheck(() -> reader.readLine()), exe)
+        return CompletableFuture.supplyAsync(uncheck(reader::readLine), exe)
             .thenCompose(line -> {
                 if (line != null) {
                     print(writer, line);
@@ -65,28 +65,32 @@ public class ScriptRunner {
     /** @return future with the script exit code as result */
     public CompletableFuture<Integer> run() {
         return CompletableFuture.supplyAsync(() -> {
-            try {
+            ExecutorService errorStreamExe = null;
+            try (@Nullable PrintWriter writer = output.isPresent() ? new PrintWriter(output.get()) : null) {
+                output.filter(File::exists).ifPresent(File::delete);
+
                 Process process = builder.start();
-                ExecutorService exe = Executors.newSingleThreadExecutor();
+                errorStreamExe = Executors.newSingleThreadExecutor();
 
                 try (InputStream in = process.getInputStream();
                      BufferedReader reader = new BufferedReader(new InputStreamReader(in));
                      InputStream errorStream = process.getErrorStream();
-                     BufferedReader errReader = new BufferedReader(new InputStreamReader(errorStream));
-                     @Nullable
-                     PrintWriter writer = output.isPresent() ? new PrintWriter(output.get()) : null) {
+                     BufferedReader errReader = new BufferedReader(new InputStreamReader(errorStream))) {
 
-                    CompletableFuture<?> errWrite = writeAsync(writer, errReader, exe);
+                    CompletableFuture<?> errWrite = writeAsync(writer, errReader, errorStreamExe);
                     CompletableFuture<?> stdWrite = writeAsync(writer, reader, MoreExecutors.directExecutor());
 
                     process.waitFor();
-                    stdWrite.join();
-                    try { errWrite.get(200, TimeUnit.MILLISECONDS); }
-                    catch (TimeoutException timeout) { log.warn("Timed out waiting for err stream write", timeout); }
+                    try {
+                        stdWrite.get(250, TimeUnit.MILLISECONDS);
+                        errWrite.get(250, TimeUnit.MILLISECONDS);
+                    }
+                    catch (TimeoutException timeout) { log.warn("Timed out waiting for input streams to write", timeout); }
                 }
                 return process.exitValue();
             }
             catch (Exception ex) { ex.printStackTrace(); return 1; }
+            finally { if (errorStreamExe != null) errorStreamExe.shutdownNow(); }
         }, exe);
     }
 }
