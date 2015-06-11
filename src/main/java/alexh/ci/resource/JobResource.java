@@ -4,6 +4,7 @@ import static alexh.weak.Converter.convert;
 import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Collections.emptyMap;
+import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import alexh.Fluent;
 import alexh.ci.ScriptRunner;
@@ -20,10 +21,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @Path("jobs")
@@ -42,15 +43,11 @@ public class JobResource {
 
     @GET
     public List<Job.WrittenJob> jobs() {
-        log.info("Getting all jobs");
-        List<Job.WrittenJob> jobs = new ArrayList<>();
-        int id = 1;
-        File jobDirectory;
-        while ((jobDirectory = new File("jobs/"+ id)).exists()) {
-            jobs.add(new Job.WrittenJob(jobDirectory));
-            id += 1;
-        }
-        return jobs;
+        return IntStream.rangeClosed(1, latestJobNumber())
+            .mapToObj(id ->  new File("jobs/"+ id))
+            .filter(File::exists)
+            .map(Job.WrittenJob::new)
+            .collect(toList());
     }
 
     /**
@@ -108,6 +105,14 @@ public class JobResource {
         File jobDir = new File("jobs/"+ id);
         if (!jobDir.exists()) throw new NotFoundException();
         return new Job.WrittenJob(jobDir);
+    }
+
+    @POST
+    @Path("{jobId}/delete")
+    public void deleteJob(@PathParam("jobId") int id) {
+        File jobDir = new File("jobs/"+ id);
+        if (!jobDir.exists()) throw new NotFoundException();
+        checkArgument(jobDir.renameTo(new File("jobs/d" + jobDir.getName())));
     }
 
     @POST
