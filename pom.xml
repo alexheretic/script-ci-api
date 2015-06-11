@@ -25,7 +25,7 @@
 
     <dependency>
       <groupId>com.github.alexheretic</groupId>
-      <artifactId>fluent</artifactId>
+      <artifactId>dynamics</artifactId>
       <version>1.0.1</version>
     </dependency>
 

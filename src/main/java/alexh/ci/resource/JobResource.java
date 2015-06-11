@@ -1,5 +1,6 @@
 package alexh.ci.resource;
 
+import static alexh.weak.Converter.convert;
 import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Collections.emptyList;
@@ -13,10 +14,7 @@ import com.google.common.base.Throwables;
 import com.google.common.io.Files;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -25,6 +23,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.stream.Stream;
 
 @Path("jobs")
 @Produces(APPLICATION_JSON)
@@ -45,9 +44,58 @@ public class JobResource {
         return emptyList();
     }
 
+    /**
+     * @param config new job configuration
+     *   {
+     *     okScript: {
+     *       code: "#!...",
+     *       errorScript: {
+     *         code: "#!..."
+     *       },
+     *       okScript: {
+     *         code: "#!...",
+     *         okScript: {...}
+     *       }
+     *     }
+     *   }
+     *
+     * @return result map
+     *   {
+     *     id: 123
+     *   }
+     */
+    @POST
+    @Consumes(APPLICATION_JSON)
+    public Map newJob(Map config) throws Exception {
+        File newJobDir;
+        int newJobNumber;
+        synchronized (this) {
+            newJobNumber = latestJobNumber() + 1;
+            newJobDir = new File("jobs/" + newJobNumber);
+            checkArgument(newJobDir.mkdirs());
+        }
+
+        try (PrintWriter writer = new PrintWriter(new File(newJobDir, "script.sh"))) {
+            writer.write("echo 'hello'");
+        }
+
+        return new Fluent.HashMap<>().append("id", newJobNumber);
+    }
+
+    private int latestJobNumber() {
+        File jobs = new File("jobs");
+        if (!jobs.exists()) checkArgument(jobs.mkdir());
+
+        return Stream.of(jobs.list())
+            .filter(name -> convert(name).intoIntegerWorks())
+            .mapToInt(Integer::valueOf)
+            .max()
+            .orElse(0);
+    }
+
     @POST
     @Path("single")
-    public synchronized void postScript(String script) throws Exception {
+    public synchronized void saveAndRunSingleScript(String script) throws Exception {
         File scriptHome = new File("jobs/single-job/scripts");
         if (!scriptHome.exists())
             checkArgument(scriptHome.mkdirs());
