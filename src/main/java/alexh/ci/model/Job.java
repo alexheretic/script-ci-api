@@ -18,20 +18,23 @@ public class Job {
         okScript.validateIn();
     }
 
-    public WrittenJob writeScriptsTo(File directory) {
+    public WrittenJob writeTo(File directory) {
         return new WrittenJob(this, directory);
     }
 
     public static class WrittenJob extends Job {
         public final Script.WrittenScript okScript;
+        public final int id;
 
         public WrittenJob(Job job, File directory) {
             checkArgument(directory.mkdirs());
-            this.okScript = new Script.WrittenScript(job.okScript, new File(directory, "script-o.sh"));
+            this.id = Integer.valueOf(directory.getName());
+            this.okScript = new Script.WrittenScript(job.okScript, new File(directory, "scripts/script-o.sh"));
         }
 
         public WrittenJob(File directory) {
-            this.okScript = new Script.WrittenScript(new File(directory, "script-o.sh"));
+            this.id = Integer.valueOf(directory.getName());
+            this.okScript = new Script.WrittenScript(new File(directory, "scripts/script-o.sh"));
         }
     }
 }

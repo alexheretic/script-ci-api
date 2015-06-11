@@ -3,7 +3,6 @@ package alexh.ci.resource;
 import static alexh.weak.Converter.convert;
 import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import alexh.Fluent;
@@ -21,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -41,8 +41,16 @@ public class JobResource {
     }
 
     @GET
-    public List<Map> jobs() {
-        return emptyList();
+    public List<Job.WrittenJob> jobs() {
+        log.info("Getting all jobs");
+        List<Job.WrittenJob> jobs = new ArrayList<>();
+        int id = 1;
+        File jobDirectory;
+        while ((jobDirectory = new File("jobs/"+ id)).exists()) {
+            jobs.add(new Job.WrittenJob(jobDirectory));
+            id += 1;
+        }
+        return jobs;
     }
 
     /**
@@ -78,7 +86,7 @@ public class JobResource {
             checkArgument(newJobDir.mkdirs());
         }
 
-        newJob.writeScriptsTo(new File(newJobDir, "scripts"));
+        newJob.writeTo(newJobDir);
 
         return new Fluent.HashMap<>().append("id", newJobNumber);
     }
@@ -99,7 +107,7 @@ public class JobResource {
     public Job job(@PathParam("jobId") int id) {
         File jobDir = new File("jobs/"+ id);
         if (!jobDir.exists()) throw new NotFoundException();
-        return new Job.WrittenJob(new File(jobDir, "scripts"));
+        return new Job.WrittenJob(jobDir);
     }
 
     @POST
