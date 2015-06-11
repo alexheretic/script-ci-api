@@ -8,6 +8,7 @@ import static java.util.Collections.emptyMap;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import alexh.Fluent;
 import alexh.ci.ScriptRunner;
+import alexh.ci.model.Job;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
@@ -45,7 +46,7 @@ public class JobResource {
     }
 
     /**
-     * @param config new job configuration
+     * @param newJob new job configuration
      *   {
      *     okScript: {
      *       code: "#!...",
@@ -66,7 +67,9 @@ public class JobResource {
      */
     @POST
     @Consumes(APPLICATION_JSON)
-    public Map newJob(Map config) throws Exception {
+    public Map newJob(Job newJob) throws Exception {
+        newJob.validateIn();
+
         File newJobDir;
         int newJobNumber;
         synchronized (this) {
@@ -75,9 +78,7 @@ public class JobResource {
             checkArgument(newJobDir.mkdirs());
         }
 
-        try (PrintWriter writer = new PrintWriter(new File(newJobDir, "script.sh"))) {
-            writer.write("echo 'hello'");
-        }
+        newJob.writeScriptsTo(new File(newJobDir, "scripts"));
 
         return new Fluent.HashMap<>().append("id", newJobNumber);
     }
@@ -91,6 +92,14 @@ public class JobResource {
             .mapToInt(Integer::valueOf)
             .max()
             .orElse(0);
+    }
+
+    @GET
+    @Path("{jobId}")
+    public Job job(@PathParam("jobId") int id) {
+        File jobDir = new File("jobs/"+ id);
+        if (!jobDir.exists()) throw new NotFoundException();
+        return new Job.WrittenJob(new File(jobDir, "scripts"));
     }
 
     @POST
