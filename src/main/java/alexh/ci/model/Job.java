@@ -27,9 +27,12 @@ public class Job {
         public final int id;
 
         public WrittenJob(Job job, File directory) {
-            checkArgument(directory.mkdirs());
+            if (!directory.exists()) checkArgument(directory.mkdirs());
+            File scriptDir = new File(directory, "scripts");
+            if (!scriptDir.exists()) checkArgument(scriptDir.mkdir());
+
             this.id = Integer.valueOf(directory.getName());
-            this.okScript = new Script.WrittenScript(job.okScript, new File(directory, "scripts/script-o.sh"));
+            this.okScript = new Script.WrittenScript(job.okScript, new File(scriptDir, "script-o.sh"));
         }
 
         public WrittenJob(File directory) {

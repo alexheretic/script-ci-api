@@ -112,7 +112,7 @@ public class JobResource {
     public void deleteJob(@PathParam("jobId") int id) {
         File jobDir = new File("jobs/"+ id);
         if (!jobDir.exists()) throw new NotFoundException();
-        checkArgument(jobDir.renameTo(new File("jobs/d" + jobDir.getName())));
+        checkArgument(jobDir.renameTo(new File("jobs/" + id + "-deleted-" + Instant.now().toString().replace(":", ";"))));
     }
 
     @POST
