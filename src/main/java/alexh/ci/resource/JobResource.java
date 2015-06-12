@@ -9,15 +9,14 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import alexh.Fluent;
 import alexh.ci.ScriptRunner;
 import alexh.ci.model.Job;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import javax.ws.rs.*;
+import javax.ws.rs.core.Response;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.Instant;
@@ -73,6 +72,10 @@ public class JobResource {
     @POST
     @Consumes(APPLICATION_JSON)
     public Map newJob(Job newJob) throws Exception {
+        if (newJob == null)
+            throw new WebApplicationException(Response.status(400)
+                .entity(ImmutableMap.of("message", "Missing payload"))
+                .build());
         newJob.validateIn();
 
         File newJobDir;
@@ -101,7 +104,7 @@ public class JobResource {
 
     @GET
     @Path("{jobId}")
-    public Job job(@PathParam("jobId") int id) {
+    public Job.WrittenJob job(@PathParam("jobId") int id) {
         File jobDir = new File("jobs/"+ id);
         if (!jobDir.exists()) throw new NotFoundException();
         return new Job.WrittenJob(jobDir);
@@ -113,6 +116,44 @@ public class JobResource {
         File jobDir = new File("jobs/"+ id);
         if (!jobDir.exists()) throw new NotFoundException();
         checkArgument(jobDir.renameTo(new File("jobs/" + id + "-deleted-" + Instant.now().toString().replace(":", ";"))));
+    }
+
+    /** @return result map { run: runId } */
+    @POST
+    @Path("{jobId}/run")
+    public Map runJob(@PathParam("jobId") int id) {
+        // todo jobs should have an executor each
+        job(id).run(singleExecutor);
+        // todo remove hardcode
+        return new Fluent.HashMap<>().append("run", "1");
+    }
+
+    /**
+     * @return status json
+     * for example:
+     * {
+        "ended": "2015-06-12T09:09:52.753Z",
+        "exitCode": 0,
+        "run": 1,
+        "started": "2015-06-12T09:09:52.688Z",
+        "okScriptStatus": {
+            "started": "2015-06-12T09:09:52.688Z",
+            "ended": "2015-06-12T09:09:52.721Z",
+            "exitCode": 0,
+            "log": "...",
+            "okScriptStatus": {
+                "started": "2015-06-12T09:09:52.725Z",
+                "ended": "2015-06-12T09:09:52.753Z",
+                "exitCode": 0,
+                "log": "..."
+            }
+        }
+        }
+     */
+    @GET
+    @Path("{jobId}/status/{runId}")
+    public Map jobStatus(@PathParam("jobId") int id, @PathParam("runId") int run) {
+        return job(id).status(run);
     }
 
     @POST
@@ -129,28 +170,14 @@ public class JobResource {
         File workHome = new File("jobs/single-job/work");
         if (!workHome.exists()) checkArgument(workHome.mkdir());
 
-        log.info("Running single-job...");
-        final Fluent.Map status = new Fluent.HashMap<>().append("started", Instant.now().toString());
-        writeSingleJobStatus(status);
-
         new ScriptRunner(new File("jobs/single-job/scripts/script.sh").getAbsolutePath())
             .useDirectory(workHome)
             .executeWith(singleExecutor)
-            .outputTo(new File("jobs/single-job/out.log"))
+            .outputTo(new File("jobs/single-job"))
             .run()
             .thenAccept(exit -> {
-                writeSingleJobStatus(status
-                    .append("ended", Instant.now().toString())
-                    .append("exitCode", exit));
                 log.info("Ran single-job with exit code: " + exit);
             });
-    }
-
-    private void writeSingleJobStatus(Map status) {
-        try (PrintWriter writer = new PrintWriter(new File("jobs/single-job/status.json"))) {
-            writer.write(objectMapper.writeValueAsString(status));
-        }
-        catch (JsonProcessingException | FileNotFoundException e) { Throwables.propagate(e); }
     }
 
     @GET

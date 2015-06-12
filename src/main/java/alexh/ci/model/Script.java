@@ -1,17 +1,27 @@
 package alexh.ci.model;
 
 import static alexh.Unchecker.uncheckedGet;
+import alexh.ci.ScriptRunner;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.PrintWriter;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 public class Script {
+
+    private static final Logger log = LoggerFactory.getLogger(Script.class);
 
     public Optional<? extends Script> okScript = Optional.empty();
     public Optional<? extends Script> errorScript = Optional.empty();
@@ -64,5 +74,43 @@ public class Script {
         private File childErrorLocation() {
             return new File(location.getPath().replaceFirst("\\.sh$", "") + "e.sh");
         }
+
+        public CompletableFuture<Integer> run(File runsDirectory, Executor executor) {
+            log.debug("Running script "+ location);
+            return new ScriptRunner(location.getAbsolutePath())
+                .outputTo(runsDirectory)
+                .useDirectory(new File(runsDirectory.getParentFile().getParentFile(),  "work"))
+                .executeWith(executor)
+                .run()
+                .thenCompose(exit -> {
+                    log.debug(location + " ran with exit code: " + exit);
+
+                    if (exit == 0 && okScript.isPresent()) return okScript.get().run(runsDirectory, executor);
+                    else if (exit != 0 && errorScript.isPresent()) return errorScript.get().run(runsDirectory, executor);
+                    return CompletableFuture.completedFuture(exit);
+                });
+        }
+
+        public Map<String, Object> status(File runsDirectory) {
+            final Map<String, Object> status = new LinkedHashMap<>();
+
+            Optional.of(new File(runsDirectory, location.getName() + "-status.json"))
+                .filter(File::exists)
+                .map(f -> uncheckedGet(() -> new ObjectMapper().readValue(f, Map.class)))
+                .ifPresent(status::putAll);
+
+            Optional.of(new File(runsDirectory, location.getName() + "-out.log"))
+                .filter(File::exists)
+                .map(f -> uncheckedGet(() -> Files.toString(f, Charsets.UTF_8)))
+                .ifPresent(log -> status.put("log", log));
+
+            okScript.map(s -> s.status(runsDirectory))
+                .ifPresent(scriptStatus -> status.put("okScriptStatus", scriptStatus));
+            errorScript.map(s -> s.status(runsDirectory))
+                .ifPresent(scriptStatus -> status.put("errorScriptStatus", scriptStatus));
+            return status;
+        }
     }
+
+
 }
