@@ -2,6 +2,7 @@ package alexh.ci.model;
 
 import static alexh.Unchecker.unchecked;
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Collections.emptyMap;
 import alexh.Fluent;
 import alexh.weak.Dynamic;
 import com.google.common.collect.ImmutableMap;
@@ -63,7 +64,10 @@ public class Job {
         }
 
         public Map<String, Object> status(int runId) {
-            Map rootScriptStatus = okScript.status(new File(directory, "runs/"+ runId));
+            File runDir = new File(directory, "runs/"+ runId);
+            if (!runDir.exists()) return emptyMap();
+
+            Map rootScriptStatus = okScript.status(runDir);
             LinkedList<Dynamic> statuses = listStatuses(rootScriptStatus);
 
             Map<String, Object> status = new Fluent.HashMap<String, Object>()
@@ -86,8 +90,9 @@ public class Job {
             Dynamic scriptStatus = Dynamic.from(rootScriptStatus);
             while (scriptStatus.get("started").isPresent()) {
                 list.add(scriptStatus);
-                scriptStatus =  scriptStatus.get("okScriptStatus").maybe()
-                    .orElse(scriptStatus.get("errorScriptStatus"));
+                scriptStatus =  scriptStatus.get("errorScriptStatus").maybe()
+                    .filter(s -> s.get("started").isPresent())
+                    .orElse(scriptStatus.get("okScriptStatus"));
             }
 
             return list;

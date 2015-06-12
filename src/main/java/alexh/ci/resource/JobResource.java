@@ -131,13 +131,24 @@ public class JobResource {
         checkArgument(jobDir.renameTo(new File("jobs/" + id + "-deleted-" + Instant.now().toString().replace(":", ";"))));
     }
 
+    private static final Fluent.ConcurrentHashMap<Integer, Boolean> runLock = new Fluent.ConcurrentHashMap<>();
+
     /** @return result map { run: runId } */
     @POST
     @Path("{jobId}/run")
     public Map runJob(@PathParam("jobId") int id) {
         // todo jobs should have an executor each
-        job(id).run(singleExecutor);
-        // todo remove hardcode
+
+        if (runLock.containsKey(id))
+            throw new WebApplicationException(Response.status(400)
+                .entity(ImmutableMap.of("message", "Already running"))
+                .build());
+
+        runLock.append(id, true);
+
+        job(id).run(singleExecutor)
+            .thenRun(() -> runLock.remove(id));
+        // todo remove hardcode /1
         return new Fluent.HashMap<>().append("run", "1");
     }
 
