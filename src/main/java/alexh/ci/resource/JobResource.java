@@ -183,12 +183,12 @@ public class JobResource {
     @GET
     @Path("single/out")
     public Map singleJobOutput() throws IOException {
-        File status = new File("jobs/single-job/status.json");
+        File status = new File("jobs/single-job/script.sh-status.json");
         if (!status.exists()) return emptyMap();
 
         return new Fluent.HashMap<>()
             .appendAll(objectMapper.readValue(status, Map.class))
-            .append("log", Files.toString(new File("jobs/single-job/out.log"), UTF_8));
+            .append("log", Files.toString(new File("jobs/single-job/script.sh-out.log"), UTF_8));
     }
 
     @GET
