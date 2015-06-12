@@ -156,6 +156,12 @@ public class JobResource {
         return job(id).status(run);
     }
 
+    @GET
+    @Path("{jobId}/status/latest")
+    public Map jobStatus(@PathParam("jobId") int id) {
+        return job(id).status(1);
+    }
+
     @POST
     @Path("single")
     public synchronized void saveAndRunSingleScript(String script) throws Exception {
