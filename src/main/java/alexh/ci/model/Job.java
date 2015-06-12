@@ -1,9 +1,11 @@
 package alexh.ci.model;
 
+import static alexh.Unchecker.unchecked;
 import static com.google.common.base.Preconditions.checkArgument;
 import alexh.Fluent;
 import alexh.weak.Dynamic;
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.io.FileUtils;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import java.io.File;
@@ -15,6 +17,9 @@ import java.util.concurrent.Executor;
 public class Job {
 
     public Script okScript;
+
+    // for update ui -> api only
+    public Integer id;
 
     public void validateIn() {
         if (okScript == null)
@@ -53,7 +58,7 @@ public class Job {
             // todo not always run in runs/1
             File runsDir = new File(okScript.location.getParentFile().getParentFile(), "runs/1");
             if (!runsDir.exists()) checkArgument(runsDir.mkdirs());
-
+            unchecked(() -> FileUtils.cleanDirectory(runsDir));
             return okScript.run(runsDir, executor);
         }
 

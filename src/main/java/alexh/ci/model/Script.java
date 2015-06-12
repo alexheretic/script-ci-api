@@ -1,6 +1,7 @@
 package alexh.ci.model;
 
 import static alexh.Unchecker.uncheckedGet;
+import static java.util.Collections.emptyMap;
 import alexh.ci.ScriptRunner;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -77,6 +78,7 @@ public class Script {
 
         public CompletableFuture<Integer> run(File runsDirectory, Executor executor) {
             log.debug("Running script "+ location);
+
             return new ScriptRunner(location.getAbsolutePath())
                 .outputTo(runsDirectory)
                 .useDirectory(new File(runsDirectory.getParentFile().getParentFile(),  "work"))
@@ -96,7 +98,10 @@ public class Script {
 
             Optional.of(new File(runsDirectory, location.getName() + "-status.json"))
                 .filter(File::exists)
-                .map(f -> uncheckedGet(() -> new ObjectMapper().readValue(f, Map.class)))
+                .map(f -> {
+                    try { return new ObjectMapper().readValue(f, Map.class); }
+                    catch (Exception ex) { return emptyMap(); }
+                })
                 .ifPresent(status::putAll);
 
             Optional.of(new File(runsDirectory, location.getName() + "-out.log"))

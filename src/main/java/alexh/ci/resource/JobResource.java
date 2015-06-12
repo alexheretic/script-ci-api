@@ -102,6 +102,19 @@ public class JobResource {
             .orElse(0);
     }
 
+    @PUT
+    @Path("{jobId}")
+    @Consumes(APPLICATION_JSON)
+    public void updateJob(Job job) {
+        if (job == null || job.id == null)
+            throw new WebApplicationException(Response.status(400)
+                .entity(ImmutableMap.of("message", "Missing payload"))
+                .build());
+        job.validateIn();
+
+        job.writeTo(new File("jobs/"+ job.id));
+    }
+
     @GET
     @Path("{jobId}")
     public Job.WrittenJob job(@PathParam("jobId") int id) {
